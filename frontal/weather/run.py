@@ -63,3 +63,6 @@ example = Query("example", ["print this", "could you print", "throw an error", "
 queries.append(example)
 queryKeys.append(example.keys)
 
+def process(literal, profileInfo, override=False):
+    
+    pass

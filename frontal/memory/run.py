@@ -1,10 +1,14 @@
-queries = []
-queryKeys = []
+from frontal.uni import functions
+from temporal import induct
+from temporal import grab
+from stem import callosum
+from frontal.memory import activequeries
 
-class Query():
-    def __init__(self, queryName, queryKeys, queryFunction, querySTContext=None, whitelist=None, require=None):
+import datetime
+
+class Query(object):
+    def __init__(self, queryName, queryKeys, querySTContext=None, whitelist=None, require=None):
         self.name = queryName,
-        self.function = queryFunction,
         self.keys = queryKeys,
         self.STContext = querySTContext
         self.whitelist = whitelist
@@ -15,51 +19,65 @@ class Query():
         else:
             self.context = False
     
-    def grade(self, keyword, literal, override=False):
+    def trace(self, boolean=True):
+        if not boolean:
+            print(f"Success performing command {self.name}.")
+        else:
+            induct.stCommit({'savename':self.name,'save':self.STContext})
+            print(f"Success performing and saving command {self.name}.")
+
+    def fire(self, obj, keywords, literal, profile):
+        print(obj)
+        success = obj.func(keywords, literal, profile)
+        if success:
+            Query.trace(self, self.context)
+            return True
+        else:
+            raise Exception(f"Failed to fire function {self.name}")
+    def func():
+        pass
+    def grade(self, literal, profile, override=False):
         truePass = False
+        keyword = literal.lower()
+        keyword = literal.split(" ")
+        print(str(keyword))
         for key in self.keys:
-            points = 0
+            print(key)
             for kword in key:
+                points = 0
                 for word in keyword:
                     if self.require is not None and word in self.require:
                         points += 1.5
                         truePass = True
                     if self.whitelist is not None and word in self.whitelist:
                         points -= 5
-                    if word == kword:
+                    if word in kword:
                         points += 1
-        if (points > (len(keyword) * .74) or points > (len(key) * .74)) or (override and points > (len(keyword) * 0.5)):
-            if truePass and self.require is not None:
-                return True, self.name
-            elif not truePass and self.require is None:
-                return True, self.Name
+                print(str(points) + " " + str(kword))
+                if (points > (len(keyword) * .74) or points > (len(kword) * .74)) or (override and points > (len(keyword) * 0.5)):
+                    print("yessir")
+                    if truePass and self.require is not None:
+                        self.fire(self, keyword,literal,profile)
+                        return True
+                    elif not truePass and self.require is None:
+                        print("yes")
+                        self.fire(self, keyword,literal,profile)
+                        return True
         return False
 
+def timeFunction(keywords, literal, profile):
+    now = datetime.datetime.now()
+    phrase = functions.decision([f"The current time is {now.strftime('%I:%M %p')}.",
+                             f"It's currently {now.strftime('%I:%M %p')}.",
+                             f"The time now is {now.strftime('%I:%M %p')}",
+                             now.strftime('%I:%M %p'),
+                             f"It is currently {now.strftime('%I:%M %p')}"])
+    callosum.lastProcessed = {"phrase":phrase, "type":"basic"}
+    return True
 
-    def trace(self, boolean=True):
-        if not boolean:
-            return
-        else:
-            print(f"Success performing command {self.name}.")
-            pass
-
-    def fire(self, keywords, additionalArgs=None, additionalArgs2=None):
-        success = self.function(self, keywords, additionalArgs, additionalArgs2)
-        if success:
-            Query.trace(self, self.context)
-            return True
-        else:
-            raise Exception(f"Failed to fire function {self.name}")
-
-def exampleFunction(keywords, additionalArgs=None, additionalArgs2=None):
-    if "print" in keywords:
-        print("Printing")
-        return True
-    elif "error" in keywords:
-        raise Exception("Throwing an error")
-    return False
-
-example = Query("example", ["print this", "could you print", "throw an error", "error"], exampleFunction, require=["print","error"])
-queries.append(example)
-queryKeys.append(example.keys)
-
+def process(literal, profileInfo, override=False):
+    keyword = literal.lower()
+    keyword = literal.split(" ")
+    nate = grab.requestMemory('longterm', {'type': 'brain', 'path': 'nate'}, True)
+    friend = grab.requestMemory('longterm', {'type': 'brain', 'path': 'friends'}, True)
+    self = grab.requestMemory('longterm', {'type': 'brain', 'path': 'self'}, True)

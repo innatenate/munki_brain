@@ -1,14 +1,16 @@
 from frontal.uni import functions
+from temporal import induct
+from temporal import grab
+from stem import callosum
+from frontal.memory import activequeries
 
 import datetime
 
 queries = []
-queryKeys = []
 
-class Query():
-    def __init__(self, queryName, queryKeys, queryFunction, querySTContext=None, whitelist=None, require=None):
+class Query(object):
+    def __init__(self, queryName, queryKeys, querySTContext=None, whitelist=None, require=None):
         self.name = queryName,
-        self.function = queryFunction,
         self.keys = queryKeys,
         self.STContext = querySTContext
         self.whitelist = whitelist
@@ -19,51 +21,153 @@ class Query():
         else:
             self.context = False
     
-    def grade(self, keyword, literal, override=False):
+    def trace(self, boolean=True):
+        if not boolean:
+            print(f"Success performing command {self.name}.")
+        else:
+            induct.stCommit({'savename':self.name,'save':self.STContext})
+            print(f"Success performing and saving command {self.name}.")
+
+    def fire(self, obj, keywords, literal, profile):
+        print(obj)
+        success = obj.func(keywords, literal, profile)
+        if success:
+            Query.trace(self, self.context)
+            return True
+        else:
+            raise Exception(f"Failed to fire function {self.name}")
+    def func():
+        pass
+    def grade(self, literal, profile, override=False):
         truePass = False
+        keyword = literal.lower()
+        keyword = literal.split(" ")
+        print(str(keyword))
         for key in self.keys:
-            points = 0
+            print(key)
             for kword in key:
+                points = 0
                 for word in keyword:
                     if self.require is not None and word in self.require:
                         points += 1.5
                         truePass = True
                     if self.whitelist is not None and word in self.whitelist:
                         points -= 5
-                    if word == kword:
+                    if word in kword:
                         points += 1
-        if (points > (len(keyword) * .74) or points > (len(key) * .74)) or (override and points > (len(keyword) * 0.5)):
-            if truePass and self.require is not None:
-                return True, self.name
-            elif not truePass and self.require is None:
-                return True, self.Name
+                print(str(points) + " " + str(kword))
+                if (points > (len(keyword) * .74) or points > (len(kword) * .74)) or (override and points > (len(keyword) * 0.5)):
+                    print("yessir")
+                    if truePass and self.require is not None:
+                        self.fire(self, keyword,literal,profile)
+                        return True
+                    elif not truePass and self.require is None:
+                        print("yes")
+                        self.fire(self, keyword,literal,profile)
+                        return True
         return False
 
 
-    def trace(self, boolean=True):
-        if not boolean:
-            return
-        else:
-            print(f"Success performing command {self.name}.")
-            pass
 
-    def fire(self, keywords, additionalArgs=None, additionalArgs2=None):
-        success = self.function(self, keywords, additionalArgs, additionalArgs2)
-        if success:
-            Query.trace(self, self.context)
-            return True
-        else:
-            raise Exception(f"Failed to fire function {self.name}")
-
-def timeFunction(keywords, additionalArgs=None, additionalArgs2=None):
+def timeFunction(keywords, literal, profile):
     now = datetime.datetime.now()
     phrase = functions.decision([f"The current time is {now.strftime('%I:%M %p')}.",
                              f"It's currently {now.strftime('%I:%M %p')}.",
                              f"The time now is {now.strftime('%I:%M %p')}",
                              now.strftime('%I:%M %p'),
                              f"It is currently {now.strftime('%I:%M %p')}"])
-    
-example = Query("example", ["print this", "could you print", "throw an error", "error"], exampleFunction, require=["print","error"])
-queries.append(example)
-queryKeys.append(example.keys)
+    callosum.lastProcessed = {"phrase":phrase, "type":"basic"}
+    return True
 
+def repeatFunction(keywords, literal, profile):
+    phrase = grab.requestMemory(type='shortterm',context=f'lastProcessed{profile["info"]["prefname"]}', returnMem=True)
+    phrase = phrase['phrase']
+    beginning = functions.decision([
+        "To repeat, I said ",
+        "I said, ",
+        "What I was saying was, ",
+        "Yeah. I can repeat that. What I was saying was, ",
+        "What I said was, ",
+        "What I had said was, "
+    ])
+    phrase = beginning + phrase
+    callosum.lastProcessed = {"phrase":phrase, "type":"basic"}
+    return True
+
+def dateFunction(keywords, literal, profile):
+    now = datetime.datetime.now()
+    phrase = functions.decision([
+        f"The current date is {now.strftime('%A, %B %d, %Y')}.",
+        f"Today is {now.strftime('%A, %B %d, %Y')}",
+        f"Today's date is {now.strftime('%A, %B %d, %Y')}.",
+        f"The date for today is {now.strftime('%A, %B %d, %Y')}."])
+    callosum.lastProcessed = {"phrase":phrase, "type":"basic"}
+    return True
+
+def howFunction(keywords, literal, profile):
+    decide = functions.decision([
+        'adroit',
+        'concomitant',
+        'effulgent',
+        'good',
+        'fair',
+        'excellent',
+        'A1',
+        'swell',
+    ])
+    phrase = functions.decision([
+        f"I'm feeling {decide}. How about you?",
+        f"I'm feeling pretty {decide}. How about you?",
+        f"I think I feel {decide}. How about yourself?",
+        f"Not too bad, {profile['info']['name']}. How about yourself?",
+        f"I feel pretty {decide}, {profile['info']['name']}. How about you?",
+        f"I feel {decide}. How about you, {profile['info']['name']}?"
+    ])
+    query = {
+        'keys':['good', 'fair', 'excellent', 'great', 'thanks', 'thank', 'wonderful', 'you'],
+        'func': None,
+        'type': 'key-specific',
+    }
+    def sendQuery(keywords, literal, profile):
+        if 'thank' in keywords or 'thanks' in keywords:
+            phrase = functions.decision([
+                f'Glad to hear it, {profile["info"]["name"]}. If you need anything, just let me know.',
+                f'Good to hear, {profile["info"]["name"]}. If you need anything, just ask me.',
+                f'If you need anything {profile["info"]["name"]}, just let me know.'
+            ])
+        else:
+            phrase = functions.decision([
+                'Good to hear. Talk to me if you need anything.',
+                'Glad to hear it. If you need anything, just let me know.',
+                'Good to hear. If you need anything, just let me know.'
+            ])
+        callosum.lastProcessed = {"phrase":phrase, "type":"basic"}
+        return True
+    query['func'] = sendQuery
+    activequeries.add(query, profile['info']['name'])
+    callosum.lastProcessed = {"phrase":phrase, "type":"query"}
+    return True
+
+
+time = Query(queryName="time", queryKeys=["what time is it", "what is the time", "what time", "what the time"], require=["time"])
+time.func = timeFunction
+queries.append(time)
+
+repeat = Query(queryName="repeat", queryKeys=["could you repeat that", "what did you say", "what was that", "i couldnt hear you", "repeat that please", "will you repeat that", "i didnt hear that"])
+repeat.func = repeatFunction
+queries.append(repeat)
+
+date = Query(queryName="date", queryKeys=["what year is it", "what is the year", "what is the month", "what month is it", "what is todays date", "what is the date", "what date", "what is today date", "what is the date for today"], require=["date", "year", "month"])
+date.func = dateFunction
+queries.append(date)
+
+how = Query(queryName="how", queryKeys=["how are you", "whats up", "how you", "how have you been", "hows everything", "whats going on"])
+how.func = howFunction
+queries.append(how)
+
+def process(literal, profileInfo, override=False):
+    for obj in queries:
+        print(obj)
+        success = obj.grade(literal, profileInfo, override)
+        if success:
+            return True
