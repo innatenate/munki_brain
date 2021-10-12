@@ -75,9 +75,34 @@ def timeFunction(keywords, literal, profile):
     callosum.lastProcessed = {"phrase":phrase, "type":"basic"}
     return True
 
-def process(literal, profileInfo, override=False):
+def process(literal, profile, override=False):
     keyword = literal.lower()
     keyword = literal.split(" ")
     nate = grab.requestMemory('longterm', {'type': 'brain', 'path': 'nate'}, True)
     friend = grab.requestMemory('longterm', {'type': 'brain', 'path': 'friends'}, True)
     self = grab.requestMemory('longterm', {'type': 'brain', 'path': 'self'}, True)
+    chunks = [nate, friend, self]
+    for chunk in chunks:
+        for fold in chunk:
+            for cell in chunk[fold]:
+                for neuron in chunk[fold][cell]:
+                    for key in chunk[fold][neuron]['keys']:
+                        for kword in key:
+                            points = 0
+                            for word in keyword:
+                                if chunk[fold][neuron]['require'] is not None and word in chunk[fold][neuron]['require']:
+                                    points += 1.5
+                                    truePass = True
+                                if chunk[fold][neuron]['whitelist'] is not None and word in chunk[fold][neuron]['whitelist']:
+                                    points -= 5
+                                    truePass = False
+                                if word in kword:
+                                    points += 1
+                            print(str(points) + " " + str(kword))
+                            if (points > (len(keyword) * .74) or points > (len(kword) * .74)) or (override and points > (len(keyword) * 0.5)):
+                                if truePass and chunk[fold][neuron]['require'] is not None:
+                                    neuron['fire'](self, keyword,literal,profile)
+                                    return True
+                                elif not truePass and chunk[fold][neuron]['require'] is None:
+                                    neuron['fire'](self, keyword,literal,profile)
+                                    return True
